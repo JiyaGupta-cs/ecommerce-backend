@@ -11,6 +11,11 @@ router.post('/register-seller', verifyToken, isUser, userController.registersell
 
 router.post('/forgot-password', userController.forgotPassword); 
 
+router.post('/reset-password/', userController.resetPasswordpost); 
+
+router.get('/reset-password/:token', userController.resetPassword); 
+
+
 
 
 

@@ -19,7 +19,7 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = process.env.REDIRECT_URI;
 const REFRESH_TOKEN = process.env.REFRESH_TOKEN;
 
-const MY_EMAIL=process.env.MY_EMAIL;
+const MY_EMAIL = process.env.MY_EMAIL;
 
 const oAuth2Client = new google.auth.OAuth2(
     CLIENT_ID,
@@ -96,6 +96,7 @@ const login = async (req, res) => {
 }
 
 
+// Step 1: Generate a Password Reset Token
 const forgotPassword = async (req, res) => {
     const { email } = req.body;
 
@@ -108,8 +109,16 @@ const forgotPassword = async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
+        // Create a unique reset token (could also be stored in the DB if you prefer)
         const token = crypto.randomBytes(20).toString('hex');
 
+        // Save the token in the user's record (optional but recommended)
+        await prisma.user.update({
+            where: { email },
+            data: { resetToken: token, resetTokenExpiry: new Date(Date.now() + 3600000) }, // Token valid for 1 hour
+        });
+
+        // Send email with the reset link
         const accessToken = await oAuth2Client.getAccessToken();
 
         const transporter = nodemailer.createTransport({
@@ -141,11 +150,67 @@ const forgotPassword = async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        console.log("******************************")
-        console.log(CLIENT_ID)
         return res.status(500).json({ message: `Server error: ${err}` });
     }
 };
+
+// Step 2: Handle Password Reset Request
+const resetPassword = async (req, res) => {
+    const { token } = req.params;
+
+    try {
+        // Find the user with the reset token and check for expiry
+        const user = await prisma.user.findFirst({
+            where: { resetToken: token },
+        });
+
+        if (!user || user.resetTokenExpiry < Date.now()) {
+            return res.status(400).json({ error: 'Invalid or expired token' });
+        }
+
+        // If valid, return a response to allow password input
+        res.status(200).json({ message: 'Token is valid, please provide a new password' });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: `Server error: ${err}` });
+    }
+};
+
+// Step 3: Update User Password
+const resetPasswordpost = async (req, res) => {
+    const { token, password } = req.body;
+
+    try {
+        const user = await prisma.user.findFirst({
+            where: { resetToken: token },
+        });
+
+        if (!user || user.resetTokenExpiry < Date.now()) {
+            return res.status(400).json({ error: 'Invalid or expired token' });
+        }
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Update user's password and clear the reset token
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                resetToken: null,         // Clear the reset token
+                resetTokenExpiry: null,   // Clear the expiry
+            },
+        });
+
+        res.status(200).json({ message: 'Password updated successfully' });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: `Server error: ${err}` });
+    }
+};
+
+
+
 
 const registerseller = async (req, res) => {
     const { password } = req.body;
@@ -193,4 +258,4 @@ const registerseller = async (req, res) => {
 
 
 
-module.exports = { signup, login, registerseller, forgotPassword }; 
+module.exports = { signup, login, registerseller, forgotPassword, resetPassword, resetPasswordpost }; 

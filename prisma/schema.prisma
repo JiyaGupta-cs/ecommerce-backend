@@ -16,6 +16,8 @@ model User {
   products Product[]
   orders   Order[]
   carts    Cart[]
+  resetToken           String?
+  resetTokenExpiry     DateTime? 
 }
 
 model Product {
