@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       Int       @id @default(autoincrement())
+  email    String    @unique
+  password String
+  name     String
+  role     Role      @default(USER) // Admin or User
+  products Product[]
+  orders   Order[]
+  carts    Cart[]
+}
+
+model Product {
+  id             Int            @id @default(autoincrement())
+  name           String
+  description    String
+  price          Float
+  actualPrice    Float?
+  quantity       Int
+  imageUrl       String
+  colors         String[]
+  specifications Json // Technical specs stored as JSON
+  seller         User           @relation(fields: [sellerId], references: [id])
+  sellerId       Int
+  categories     Category[]
+  createdAt      DateTime       @default(now())
+  orderProducts  OrderProduct[]
+  sales          Sale[]
+
+  carts Cart[] // Check
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String
+  products Product[]
+}
+
+model Order {
+  id          Int            @id @default(autoincrement())
+  buyer       User           @relation(fields: [buyerId], references: [id])
+  buyerId     Int
+  products    OrderProduct[]
+  totalAmount Float
+  status      OrderStatus    @default(PENDING)
+  createdAt   DateTime       @default(now())
+}
+
+model OrderProduct {
+  id        Int     @id @default(autoincrement())
+  order     Order   @relation(fields: [orderId], references: [id])
+  orderId   Int
+  product   Product @relation(fields: [productId], references: [id])
+  productId Int
+  quantity  Int
+}
+
+model Sale {
+  id        Int      @id @default(autoincrement())
+  product   Product  @relation(fields: [productId], references: [id])
+  productId Int
+  amount    Float
+  quantity  Int
+  createdAt DateTime @default(now())
+}
+
+enum OrderStatus {
+  PENDING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum Role {
+  USER
+  SELLER
+}
+
+model Cart {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  product   Product  @relation(fields: [productId], references: [id])
+  productId Int
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
