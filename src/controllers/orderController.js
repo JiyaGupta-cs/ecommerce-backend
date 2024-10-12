@@ -45,8 +45,8 @@ exports.createOrder = async (req, res) => {
 
 // Get all orders
 exports.getAllOrdersBySeller = async (req, res) => {
-    const sellerId = req.user.id; // Get seller's ID from authenticated user
-  
+    const sellerId = req.user.id; 
+  console.log("REC****************",sellerId)
     try {
       const orders = await prisma.order.findMany({
         where: {

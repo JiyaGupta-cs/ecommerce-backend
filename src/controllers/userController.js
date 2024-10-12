@@ -30,11 +30,15 @@ oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
 
 
 const signup = async (req, res) => {
-    const { email, password, name } = req.body;
+    const { email, password, name ,role } = req.body;
 
     try {
         if (!email || !password) {
             return res.status(400).json({ message: 'Email and password are required.' });
+        }
+
+        if (!name || !role) {
+            return res.status(400).json({ message: 'Incomplete fields' });
         }
 
         const existingUser = await prisma.user.findUnique({
